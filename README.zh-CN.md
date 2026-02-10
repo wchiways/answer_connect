@@ -48,7 +48,7 @@
 .
 ├── plugin.go                         # 插件入口（仅保留 Answer 集成逻辑）
 ├── user_context.go                   # 根目录兼容封装
-├── tests/                           # 外部包测试
+├── tests/                            # 外部包测试
 │   ├── plugin_integration_test.go
 │   └── user_context_test.go
 ├── internal/
@@ -70,6 +70,30 @@
 ├── Makefile
 ├── go.mod
 └── go.sum
+```
+
+## 安装教程
+
+### 前置要求
+
+- Go `1.23+`
+- Git
+- 可用于接入插件的 Apache Answer 运行环境
+
+### 安装步骤
+
+```bash
+git clone https://github.com/wchiways/answer_connect.git
+cd answer_connect
+go mod tidy
+make verify
+```
+
+### 新增依赖（自动更新 `go.mod`）
+
+```bash
+go get <模块路径>
+go mod tidy
 ```
 
 ## 用户上下文解析
@@ -101,3 +125,7 @@ make verify
 - OIDC 端点参考：`docs/reference/oidc-endpoints.md`
 - 数据模型：`docs/architecture/data-model.md`
 - 多实例部署建议：`docs/operations/multi-instance.md`
+
+## License
+
+本项目基于 MIT License，详见 `LICENSE`。

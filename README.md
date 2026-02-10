@@ -37,7 +37,7 @@ It is registered with `plugin.Register(...)` in `init()` and mounts routes throu
 .
 ├── plugin.go                         # Answer plugin entrypoint (integration layer)
 ├── user_context.go                   # root-level compatibility wrapper
-├── tests/                           # integration/external package tests
+├── tests/                            # integration/external package tests
 │   ├── plugin_integration_test.go
 │   └── user_context_test.go
 ├── internal/
@@ -62,6 +62,30 @@ It is registered with `plugin.Register(...)` in `init()` and mounts routes throu
 ├── Makefile
 ├── go.mod
 └── go.sum
+```
+
+## Installation
+
+### Prerequisites
+
+- Go `1.23+`
+- Git
+- Apache Answer environment for plugin integration
+
+### Step-by-Step
+
+```bash
+git clone https://github.com/wchiways/answer_connect.git
+cd answer_connect
+go mod tidy
+make verify
+```
+
+### Install New Dependencies (auto update `go.mod`)
+
+```bash
+go get <module_path>
+go mod tidy
 ```
 
 ## Documentation
@@ -101,3 +125,7 @@ make verify
 go get ./...
 go mod tidy
 ```
+
+## License
+
+This project is licensed under the MIT License. See `LICENSE`.
