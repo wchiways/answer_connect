@@ -1,0 +1,24 @@
+# Build outputs
+bin/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Coverage
+coverage.out
+*.coverprofile
+
+# Environment / secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
