@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	oidcprovider "cfszone_connect/answer_oidc_provider"
 	answerplugin "github.com/apache/answer/plugin"
 	"github.com/gin-gonic/gin"
+	oidcprovider "github.com/wchiways/answer_connect"
 )
 
 func TestPluginImplementsAnswerInterfaces(t *testing.T) {

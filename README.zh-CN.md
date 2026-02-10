@@ -72,29 +72,50 @@
 └── go.sum
 ```
 
-## 安装教程
+## 安装教程（集成到 Apache Answer）
 
-### 前置要求
+### 官方文档
 
-- Go `1.23+`
-- Git
-- 可用于接入插件的 Apache Answer 运行环境
+- Answer 安装文档：https://answer.apache.org/zh-CN/docs/installation/
+- Answer 插件构建文档：https://answer.apache.org/zh-CN/docs/plugins/
 
-### 安装步骤
+### 1）先安装并启动 Apache Answer
 
-```bash
-git clone https://github.com/wchiways/answer_connect.git
-cd answer_connect
-go mod tidy
-make verify
-```
-
-### 新增依赖（自动更新 `go.mod`）
+官方推荐先用 Docker Compose 启动：
 
 ```bash
-go get <模块路径>
-go mod tidy
+curl -fsSL https://raw.githubusercontent.com/apache/answer/main/docker-compose.yaml | docker compose -p answer -f - up
 ```
+
+启动后访问 `http://localhost:9080/install`，完成初始化向导。
+
+### 2）将本插件打包进 Answer
+
+使用 Answer 官方插件构建命令，通过 `--with` 引入插件模块：
+
+```bash
+./answer build --with <你的插件模块路径> --output ./answer-with-plugins
+```
+
+示例：
+
+```bash
+./answer build --with github.com/wchiways/answer_connect --output ./answer-with-plugins
+```
+
+### 3）检查插件是否已打包
+
+```bash
+./answer-with-plugins plugin
+```
+
+### 4）启动打包后的 Answer
+
+```bash
+./answer-with-plugins run
+```
+
+启动后进入 Answer 管理后台配置插件参数并启用。
 
 ## 用户上下文解析
 
@@ -106,7 +127,7 @@ go mod tidy
 - `Username` 或 `DisplayName`
 - `Mail`
 
-## 快速开始
+## 本地开发快速开始
 
 ```bash
 go mod tidy

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	oidc "cfszone_connect/answer_oidc_provider/internal/oidc"
 	answerplugin "github.com/apache/answer/plugin"
 	"github.com/gin-gonic/gin"
+	oidc "github.com/wchiways/answer_connect/internal/oidc"
 )
 
 const (

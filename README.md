@@ -64,29 +64,50 @@ It is registered with `plugin.Register(...)` in `init()` and mounts routes throu
 └── go.sum
 ```
 
-## Installation
+## Installation (Apache Answer)
 
-### Prerequisites
+### Official References
 
-- Go `1.23+`
-- Git
-- Apache Answer environment for plugin integration
+- Answer installation: https://answer.apache.org/docs/installation
+- Answer plugin usage/build: https://answer.apache.org/docs/plugins/
 
-### Step-by-Step
+### 1) Start Apache Answer first
 
-```bash
-git clone https://github.com/wchiways/answer_connect.git
-cd answer_connect
-go mod tidy
-make verify
-```
-
-### Install New Dependencies (auto update `go.mod`)
+The official recommended way is Docker Compose:
 
 ```bash
-go get <module_path>
-go mod tidy
+curl -fsSL https://raw.githubusercontent.com/apache/answer/main/docker-compose.yaml | docker compose -p answer -f - up
 ```
+
+Then open `http://localhost:9080/install` and complete the initialization wizard.
+
+### 2) Build Answer with this plugin
+
+Use Answer's official plugin build command and include this plugin module via `--with`:
+
+```bash
+./answer build --with <your-plugin-module-path> --output ./answer-with-plugins
+```
+
+Example:
+
+```bash
+./answer build --with github.com/wchiways/answer_connect --output ./answer-with-plugins
+```
+
+### 3) Verify plugin has been packaged
+
+```bash
+./answer-with-plugins plugin
+```
+
+### 4) Run the rebuilt Answer binary
+
+```bash
+./answer-with-plugins run
+```
+
+After startup, go to the Answer admin page to configure and enable plugin options.
 
 ## Documentation
 
@@ -106,7 +127,7 @@ Expected fields in context user object:
 - `Username` or `DisplayName`
 - `Mail`
 
-## Quick Start
+## Local Development Quick Start
 
 ```bash
 go mod tidy

@@ -1,4 +1,4 @@
-module cfszone_connect/answer_oidc_provider
+module github.com/wchiways/answer_connect
 
 go 1.23.0
 
