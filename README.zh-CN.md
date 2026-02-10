@@ -66,6 +66,11 @@
 │   ├── operations/multi-instance.md
 │   ├── reference/oidc-endpoints.md
 │   └── plans/
+├── info.yaml
+├── i18n/
+│   ├── translation.go
+│   ├── en_US.yaml
+│   └── zh_CN.yaml
 ├── README.md
 ├── Makefile
 ├── go.mod

@@ -50,6 +50,10 @@ func (h *TokenHandler) handleAuthorizationCodeGrant(ctx HTTPContext) {
 		writeOAuthError(ctx, http.StatusUnauthorized, "invalid_client", "client credentials are invalid", "token")
 		return
 	}
+	if !ClientAllowsGrantType(client, "authorization_code") {
+		writeOAuthError(ctx, http.StatusBadRequest, "unauthorized_client", ErrUnsupportedGrantType.Error(), "token")
+		return
+	}
 	codeRecord, err := h.store.ConsumeAuthCode(code, h.nowFn())
 	if err != nil {
 		h.mapCodeError(ctx, err)
@@ -82,6 +86,10 @@ func (h *TokenHandler) handleRefreshGrant(ctx HTTPContext) {
 	client, err := h.store.ValidateClientSecret(clientID, clientSecret)
 	if err != nil {
 		writeOAuthError(ctx, http.StatusUnauthorized, "invalid_client", "client credentials are invalid", "token")
+		return
+	}
+	if !ClientAllowsGrantType(client, "refresh_token") {
+		writeOAuthError(ctx, http.StatusBadRequest, "unauthorized_client", ErrUnsupportedGrantType.Error(), "token")
 		return
 	}
 	now := h.nowFn()

@@ -1,6 +1,7 @@
 package oidc
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -20,11 +21,34 @@ func NewRevokeHandler(store Store) *RevokeHandler {
 
 func (h *RevokeHandler) Handle(ctx HTTPContext) {
 	token := strings.TrimSpace(ctx.PostForm("token"))
-	if token == "" {
-		writeOAuthError(ctx, http.StatusBadRequest, "invalid_request", "token is required", "revoke")
+	clientID := strings.TrimSpace(ctx.PostForm("client_id"))
+	clientSecret := strings.TrimSpace(ctx.PostForm("client_secret"))
+	if token == "" || clientID == "" {
+		writeOAuthError(ctx, http.StatusBadRequest, "invalid_request", "token and client_id are required", "revoke")
 		return
 	}
-	if err := h.store.RevokeRefreshToken(token, h.nowFn()); err != nil {
+
+	client, err := h.store.ValidateClientSecret(clientID, clientSecret)
+	if err != nil {
+		writeOAuthError(ctx, http.StatusUnauthorized, "invalid_client", "client credentials are invalid", "revoke")
+		return
+	}
+
+	now := h.nowFn()
+	record, err := h.store.GetRefreshToken(token, now)
+	if err != nil {
+		if errors.Is(err, ErrRefreshTokenNotFound) || errors.Is(err, ErrRefreshTokenExpired) || errors.Is(err, ErrRefreshTokenRevoked) {
+			ctx.Status(http.StatusOK)
+			return
+		}
+		writeOAuthError(ctx, http.StatusInternalServerError, "server_error", "failed to revoke token", "revoke")
+		return
+	}
+	if !constantTimeEquals(record.ClientID, client.ID) {
+		ctx.Status(http.StatusOK)
+		return
+	}
+	if err = h.store.RevokeRefreshToken(token, now); err != nil {
 		writeOAuthError(ctx, http.StatusInternalServerError, "server_error", "failed to revoke token", "revoke")
 		return
 	}

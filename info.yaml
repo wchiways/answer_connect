@@ -1,0 +1,5 @@
+slug_name: answer-oidc-provider
+type: connector
+version: 0.2.0
+author: cfszone
+link: https://github.com/wchiways/answer_connect

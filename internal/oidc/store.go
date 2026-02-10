@@ -12,6 +12,8 @@ var (
 	ErrClientNotFound        = errors.New("client not found")
 	ErrClientExists          = errors.New("client already exists")
 	ErrInvalidClientSecret   = errors.New("invalid client secret")
+	ErrClientInactive        = errors.New("client is inactive")
+	ErrUnsupportedGrantType  = errors.New("client does not allow grant type")
 	ErrConsentNotFound       = errors.New("consent not found")
 	ErrAuthCodeNotFound      = errors.New("authorization code not found")
 	ErrAuthCodeExpired       = errors.New("authorization code expired")
@@ -88,6 +90,9 @@ func (s *InMemoryStore) CreateClient(client OIDCClient, rawSecret string) (OIDCC
 	client.Scopes = normalizeScopes(client.Scopes)
 	client.RedirectURIs = normalizeScopes(client.RedirectURIs)
 	client.GrantTypes = normalizeScopes(client.GrantTypes)
+	if len(client.GrantTypes) == 0 {
+		client.GrantTypes = []string{"authorization_code", "refresh_token"}
+	}
 	if client.TokenEndpointAuthMethod == "" {
 		client.TokenEndpointAuthMethod = "client_secret_post"
 	}
@@ -168,6 +173,9 @@ func (s *InMemoryStore) ValidateClientSecret(clientID, rawSecret string) (OIDCCl
 	client, err := s.GetClient(clientID)
 	if err != nil {
 		return OIDCClient{}, err
+	}
+	if !IsClientActive(client) {
+		return OIDCClient{}, ErrClientInactive
 	}
 	if client.TokenEndpointAuthMethod == "none" {
 		return client, nil
@@ -314,6 +322,24 @@ func ValidateScopes(client OIDCClient, requested []string) error {
 		}
 	}
 	return nil
+}
+
+func IsClientActive(client OIDCClient) bool {
+	status := strings.TrimSpace(strings.ToLower(client.Status))
+	return status == "" || status == "active"
+}
+
+func ClientAllowsGrantType(client OIDCClient, grantType string) bool {
+	target := strings.TrimSpace(grantType)
+	if target == "" {
+		return false
+	}
+	for _, value := range client.GrantTypes {
+		if constantTimeEquals(strings.TrimSpace(value), target) {
+			return true
+		}
+	}
+	return false
 }
 
 func consentMapKey(clientID, userID string) string {

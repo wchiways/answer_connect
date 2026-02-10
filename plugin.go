@@ -9,6 +9,7 @@ import (
 
 	answerplugin "github.com/apache/answer/plugin"
 	"github.com/gin-gonic/gin"
+	oidci18n "github.com/wchiways/answer_connect/i18n"
 	oidc "github.com/wchiways/answer_connect/internal/oidc"
 )
 
@@ -32,7 +33,8 @@ type OIDCProviderPlugin struct {
 	revokeHandler    *oidc.RevokeHandler
 	adminHandler     *oidc.AdminClientHandler
 
-	users map[string]oidc.UserProfile
+	usersMu sync.RWMutex
+	users   map[string]oidc.UserProfile
 }
 
 func init() {
@@ -44,14 +46,7 @@ func NewOIDCProviderPlugin() *OIDCProviderPlugin {
 	config := oidc.DefaultConfig().WithFallbackIssuer(answerplugin.SiteURL())
 	instance := &OIDCProviderPlugin{
 		config: config,
-		users: map[string]oidc.UserProfile{
-			"u_10001": {
-				ID:       "u_10001",
-				Username: "admin",
-				Email:    "admin@example.com",
-				Name:     "Answer Admin",
-			},
-		},
+		users:  make(map[string]oidc.UserProfile),
 	}
 	instance.rebuildServices()
 	return instance
@@ -59,12 +54,12 @@ func NewOIDCProviderPlugin() *OIDCProviderPlugin {
 
 func (p *OIDCProviderPlugin) Info() answerplugin.Info {
 	return answerplugin.Info{
-		Name:        answerplugin.MakeTranslator("plugin.answer_oidc_provider.name"),
+		Name:        answerplugin.MakeTranslator(oidci18n.PluginInfoName),
 		SlugName:    pluginSlug,
-		Description: answerplugin.MakeTranslator("plugin.answer_oidc_provider.description"),
+		Description: answerplugin.MakeTranslator(oidci18n.PluginInfoDescription),
 		Author:      "cfszone",
 		Version:     "0.2.0",
-		Link:        "https://github.com/apache/answer",
+		Link:        "https://github.com/wchiways/answer_connect",
 	}
 }
 
@@ -96,27 +91,63 @@ func (p *OIDCProviderPlugin) RegisterUnAuthRouter(r *gin.RouterGroup) {
 	p.mu.RLock()
 	basePath := p.config.BasePath
 	p.mu.RUnlock()
+
 	group := r.Group(basePath)
 	group.GET("/.well-known/openid-configuration", p.wrapHTTPContext(func(ctx oidc.HTTPContext) {
-		p.metadataHandler.HandleDiscovery(ctx)
+		handler := p.currentMetadataHandler()
+		if handler == nil {
+			writeServiceUnavailable(ctx, "discovery")
+			return
+		}
+		handler.HandleDiscovery(ctx)
 	}))
 	group.GET("/.well-known/jwks.json", p.wrapHTTPContext(func(ctx oidc.HTTPContext) {
-		p.metadataHandler.HandleJWKS(ctx)
+		handler := p.currentMetadataHandler()
+		if handler == nil {
+			writeServiceUnavailable(ctx, "jwks")
+			return
+		}
+		handler.HandleJWKS(ctx)
 	}))
 	group.GET("/authorize", p.wrapHTTPContext(func(ctx oidc.HTTPContext) {
-		p.authorizeHandler.Handle(ctx)
+		handler := p.currentAuthorizeHandler()
+		if handler == nil {
+			writeServiceUnavailable(ctx, "authorize")
+			return
+		}
+		handler.Handle(ctx)
 	}))
 	group.POST("/token", p.wrapHTTPContext(func(ctx oidc.HTTPContext) {
-		p.tokenHandler.Handle(ctx)
+		handler := p.currentTokenHandler()
+		if handler == nil {
+			writeServiceUnavailable(ctx, "token")
+			return
+		}
+		handler.Handle(ctx)
 	}))
 	group.GET("/userinfo", p.wrapHTTPContext(func(ctx oidc.HTTPContext) {
-		p.userinfoHandler.Handle(ctx)
+		handler := p.currentUserInfoHandler()
+		if handler == nil {
+			writeServiceUnavailable(ctx, "userinfo")
+			return
+		}
+		handler.Handle(ctx)
 	}))
 	group.POST("/userinfo", p.wrapHTTPContext(func(ctx oidc.HTTPContext) {
-		p.userinfoHandler.Handle(ctx)
+		handler := p.currentUserInfoHandler()
+		if handler == nil {
+			writeServiceUnavailable(ctx, "userinfo")
+			return
+		}
+		handler.Handle(ctx)
 	}))
 	group.POST("/revoke", p.wrapHTTPContext(func(ctx oidc.HTTPContext) {
-		p.revokeHandler.Handle(ctx)
+		handler := p.currentRevokeHandler()
+		if handler == nil {
+			writeServiceUnavailable(ctx, "revoke")
+			return
+		}
+		handler.Handle(ctx)
 	}))
 }
 
@@ -135,19 +166,44 @@ func (p *OIDCProviderPlugin) RegisterAuthAdminRouter(r *gin.RouterGroup) {
 	p.mu.RUnlock()
 	group := r.Group(basePath + "/admin/clients")
 	group.GET("", p.wrapHTTPContext(func(ctx oidc.HTTPContext) {
-		p.adminHandler.HandleList(ctx)
+		handler := p.currentAdminHandler()
+		if handler == nil {
+			writeServiceUnavailable(ctx, "admin_client_list")
+			return
+		}
+		handler.HandleList(ctx)
 	}))
 	group.POST("", p.wrapHTTPContext(func(ctx oidc.HTTPContext) {
-		p.adminHandler.HandleCreate(ctx)
+		handler := p.currentAdminHandler()
+		if handler == nil {
+			writeServiceUnavailable(ctx, "admin_client_create")
+			return
+		}
+		handler.HandleCreate(ctx)
 	}))
 	group.GET("/:client_id", func(ctx *gin.Context) {
-		p.adminHandler.HandleGet(oidc.WrapGinContext(ctx), strings.TrimSpace(ctx.Param("client_id")))
+		handler := p.currentAdminHandler()
+		if handler == nil {
+			ctx.JSON(http.StatusInternalServerError, oidc.OAuthError{Error: "server_error", ErrorDescription: "service unavailable", TraceID: "admin_client_get"})
+			return
+		}
+		handler.HandleGet(oidc.WrapGinContext(ctx), strings.TrimSpace(ctx.Param("client_id")))
 	})
 	group.PUT("/:client_id", func(ctx *gin.Context) {
-		p.adminHandler.HandleUpdate(oidc.WrapGinContext(ctx), strings.TrimSpace(ctx.Param("client_id")))
+		handler := p.currentAdminHandler()
+		if handler == nil {
+			ctx.JSON(http.StatusInternalServerError, oidc.OAuthError{Error: "server_error", ErrorDescription: "service unavailable", TraceID: "admin_client_update"})
+			return
+		}
+		handler.HandleUpdate(oidc.WrapGinContext(ctx), strings.TrimSpace(ctx.Param("client_id")))
 	})
 	group.DELETE("/:client_id", func(ctx *gin.Context) {
-		p.adminHandler.HandleDelete(oidc.WrapGinContext(ctx), strings.TrimSpace(ctx.Param("client_id")))
+		handler := p.currentAdminHandler()
+		if handler == nil {
+			ctx.JSON(http.StatusInternalServerError, oidc.OAuthError{Error: "server_error", ErrorDescription: "service unavailable", TraceID: "admin_client_delete"})
+			return
+		}
+		handler.HandleDelete(oidc.WrapGinContext(ctx), strings.TrimSpace(ctx.Param("client_id")))
 	})
 }
 
@@ -181,34 +237,37 @@ func (p *OIDCProviderPlugin) rebuildServices() error {
 }
 
 func (p *OIDCProviderPlugin) resolveCurrentUser(ctx oidc.HTTPContext) (oidc.UserProfile, error) {
-	if user, ok := oidc.ExtractAnswerUserFromHTTPContext(ctx); ok {
-		if existing, hit := p.users[user.ID]; hit {
-			if user.Username == "" {
-				user.Username = existing.Username
-			}
-			if user.Email == "" {
-				user.Email = existing.Email
-			}
-			if user.Name == "" {
-				user.Name = existing.Name
-			}
-		}
+	user, ok := oidc.ExtractAnswerUserFromHTTPContext(ctx)
+	if !ok {
+		return oidc.UserProfile{}, errors.New("no login user")
+	}
+
+	p.usersMu.Lock()
+	defer p.usersMu.Unlock()
+	if existing, hit := p.users[user.ID]; hit {
 		if user.Username == "" {
-			user.Username = user.ID
+			user.Username = existing.Username
+		}
+		if user.Email == "" {
+			user.Email = existing.Email
 		}
 		if user.Name == "" {
-			user.Name = user.Username
+			user.Name = existing.Name
 		}
-		p.users[user.ID] = user
-		return user, nil
 	}
-	if user, ok := p.users["u_10001"]; ok {
-		return user, nil
+	if user.Username == "" {
+		user.Username = user.ID
 	}
-	return oidc.UserProfile{}, errors.New("no login user")
+	if user.Name == "" {
+		user.Name = user.Username
+	}
+	p.users[user.ID] = user
+	return user, nil
 }
 
 func (p *OIDCProviderPlugin) resolveUserByID(userID string) (oidc.UserProfile, error) {
+	p.usersMu.RLock()
+	defer p.usersMu.RUnlock()
 	user, ok := p.users[userID]
 	if !ok {
 		return oidc.UserProfile{}, errors.New("user not found")
@@ -236,4 +295,48 @@ func (p *OIDCProviderPlugin) HealthHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, map[string]any{"status": "ok", "plugin": pluginSlug})
 	}
+}
+
+func (p *OIDCProviderPlugin) currentAuthorizeHandler() *oidc.AuthorizeHandler {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.authorizeHandler
+}
+
+func (p *OIDCProviderPlugin) currentTokenHandler() *oidc.TokenHandler {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.tokenHandler
+}
+
+func (p *OIDCProviderPlugin) currentMetadataHandler() *oidc.MetadataHandler {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.metadataHandler
+}
+
+func (p *OIDCProviderPlugin) currentUserInfoHandler() *oidc.UserInfoHandler {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.userinfoHandler
+}
+
+func (p *OIDCProviderPlugin) currentRevokeHandler() *oidc.RevokeHandler {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.revokeHandler
+}
+
+func (p *OIDCProviderPlugin) currentAdminHandler() *oidc.AdminClientHandler {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.adminHandler
+}
+
+func writeServiceUnavailable(ctx oidc.HTTPContext, traceID string) {
+	ctx.JSON(http.StatusInternalServerError, oidc.OAuthError{
+		Error:            "server_error",
+		ErrorDescription: "service unavailable",
+		TraceID:          traceID,
+	})
 }

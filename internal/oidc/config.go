@@ -3,6 +3,7 @@ package oidc
 import (
 	"encoding/json"
 	"fmt"
+	oidci18n "github.com/wchiways/answer_connect/i18n"
 	"strings"
 	"time"
 
@@ -86,8 +87,8 @@ func (c Config) toPluginConfigFields() []answerplugin.ConfigField {
 		{
 			Name:        "issuer",
 			Type:        answerplugin.ConfigTypeInput,
-			Title:       answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.issuer.title"),
-			Description: answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.issuer.description"),
+			Title:       answerplugin.MakeTranslator(oidci18n.ConfigIssuerTitle),
+			Description: answerplugin.MakeTranslator(oidci18n.ConfigIssuerDescription),
 			Required:    false,
 			Value:       n.Issuer,
 			UIOptions: answerplugin.ConfigFieldUIOptions{
@@ -97,8 +98,8 @@ func (c Config) toPluginConfigFields() []answerplugin.ConfigField {
 		{
 			Name:        "base_path",
 			Type:        answerplugin.ConfigTypeInput,
-			Title:       answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.base_path.title"),
-			Description: answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.base_path.description"),
+			Title:       answerplugin.MakeTranslator(oidci18n.ConfigBasePathTitle),
+			Description: answerplugin.MakeTranslator(oidci18n.ConfigBasePathDescription),
 			Required:    true,
 			Value:       n.BasePath,
 			UIOptions: answerplugin.ConfigFieldUIOptions{
@@ -108,8 +109,8 @@ func (c Config) toPluginConfigFields() []answerplugin.ConfigField {
 		{
 			Name:        "access_token_ttl_seconds",
 			Type:        answerplugin.ConfigTypeInput,
-			Title:       answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.access_ttl.title"),
-			Description: answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.access_ttl.description"),
+			Title:       answerplugin.MakeTranslator(oidci18n.ConfigAccessTTLTitle),
+			Description: answerplugin.MakeTranslator(oidci18n.ConfigAccessTTLDescription),
 			Required:    true,
 			Value:       fmt.Sprintf("%d", int64(n.AccessTokenTTL/time.Second)),
 			UIOptions: answerplugin.ConfigFieldUIOptions{
@@ -119,8 +120,8 @@ func (c Config) toPluginConfigFields() []answerplugin.ConfigField {
 		{
 			Name:        "id_token_ttl_seconds",
 			Type:        answerplugin.ConfigTypeInput,
-			Title:       answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.id_ttl.title"),
-			Description: answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.id_ttl.description"),
+			Title:       answerplugin.MakeTranslator(oidci18n.ConfigIDTTLTitle),
+			Description: answerplugin.MakeTranslator(oidci18n.ConfigIDTTLDescription),
 			Required:    true,
 			Value:       fmt.Sprintf("%d", int64(n.IDTokenTTL/time.Second)),
 			UIOptions: answerplugin.ConfigFieldUIOptions{
@@ -130,8 +131,8 @@ func (c Config) toPluginConfigFields() []answerplugin.ConfigField {
 		{
 			Name:        "refresh_token_ttl_seconds",
 			Type:        answerplugin.ConfigTypeInput,
-			Title:       answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.refresh_ttl.title"),
-			Description: answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.refresh_ttl.description"),
+			Title:       answerplugin.MakeTranslator(oidci18n.ConfigRefreshTTLTitle),
+			Description: answerplugin.MakeTranslator(oidci18n.ConfigRefreshTTLDescription),
 			Required:    true,
 			Value:       fmt.Sprintf("%d", int64(n.RefreshTokenTTL/time.Second)),
 			UIOptions: answerplugin.ConfigFieldUIOptions{
@@ -141,8 +142,8 @@ func (c Config) toPluginConfigFields() []answerplugin.ConfigField {
 		{
 			Name:        "authorization_code_ttl_seconds",
 			Type:        answerplugin.ConfigTypeInput,
-			Title:       answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.code_ttl.title"),
-			Description: answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.code_ttl.description"),
+			Title:       answerplugin.MakeTranslator(oidci18n.ConfigCodeTTLTitle),
+			Description: answerplugin.MakeTranslator(oidci18n.ConfigCodeTTLDescription),
 			Required:    true,
 			Value:       fmt.Sprintf("%d", int64(n.AuthorizationCodeTTL/time.Second)),
 			UIOptions: answerplugin.ConfigFieldUIOptions{
@@ -152,8 +153,8 @@ func (c Config) toPluginConfigFields() []answerplugin.ConfigField {
 		{
 			Name:        "private_key_pem",
 			Type:        answerplugin.ConfigTypeTextarea,
-			Title:       answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.private_key.title"),
-			Description: answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.private_key.description"),
+			Title:       answerplugin.MakeTranslator(oidci18n.ConfigPrivateKeyTitle),
+			Description: answerplugin.MakeTranslator(oidci18n.ConfigPrivateKeyDescription),
 			Required:    false,
 			Value:       n.PrivateKeyPEM,
 			UIOptions: answerplugin.ConfigFieldUIOptions{
@@ -163,8 +164,8 @@ func (c Config) toPluginConfigFields() []answerplugin.ConfigField {
 		{
 			Name:        "default_scopes",
 			Type:        answerplugin.ConfigTypeInput,
-			Title:       answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.default_scopes.title"),
-			Description: answerplugin.MakeTranslator("plugin.answer_oidc_provider.config.default_scopes.description"),
+			Title:       answerplugin.MakeTranslator(oidci18n.ConfigDefaultScopesTitle),
+			Description: answerplugin.MakeTranslator(oidci18n.ConfigDefaultScopesDesc),
 			Required:    true,
 			Value:       strings.Join(n.DefaultScopes, " "),
 			UIOptions: answerplugin.ConfigFieldUIOptions{

@@ -58,6 +58,11 @@ It is registered with `plugin.Register(...)` in `init()` and mounts routes throu
 │   ├── reference/
 │   │   └── oidc-endpoints.md
 │   └── plans/
+├── info.yaml
+├── i18n/
+│   ├── translation.go
+│   ├── en_US.yaml
+│   └── zh_CN.yaml
 ├── README.zh-CN.md
 ├── Makefile
 ├── go.mod

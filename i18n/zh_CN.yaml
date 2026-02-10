@@ -1,0 +1,49 @@
+plugin:
+  answer_oidc_provider:
+    backend:
+      info:
+        name:
+          other: Answer OIDC 提供方
+        description:
+          other: 对外提供 OAuth2/OIDC 接口，使 Apache Answer 可作为登录服务
+      config:
+        issuer:
+          title:
+            other: Issuer 地址
+          description:
+            other: 用于 OIDC 发现文档与令牌声明的公开发行者 URL
+        base_path:
+          title:
+            other: 基础路径
+          description:
+            other: 挂载在 Answer 路由中的 OIDC 端点前缀路径
+        access_ttl:
+          title:
+            other: Access Token 有效期（秒）
+          description:
+            other: 访问令牌的有效时长（秒）
+        id_ttl:
+          title:
+            other: ID Token 有效期（秒）
+          description:
+            other: 身份令牌的有效时长（秒）
+        refresh_ttl:
+          title:
+            other: Refresh Token 有效期（秒）
+          description:
+            other: 刷新令牌的有效时长（秒）
+        code_ttl:
+          title:
+            other: 授权码有效期（秒）
+          description:
+            other: 授权码的有效时长（秒）
+        private_key:
+          title:
+            other: RSA 私钥（PEM）
+          description:
+            other: 可选 RS256 签名私钥；留空时自动生成
+        default_scopes:
+          title:
+            other: 默认 Scope
+          description:
+            other: 当请求未传 scope 时使用的空格分隔 scope 列表

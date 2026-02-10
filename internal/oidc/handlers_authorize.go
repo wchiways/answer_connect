@@ -55,8 +55,12 @@ func (h *AuthorizeHandler) Handle(ctx HTTPContext) {
 	}
 
 	client, err := h.store.GetClient(clientID)
-	if err != nil || client.Status != "active" {
+	if err != nil || !IsClientActive(client) {
 		writeOAuthError(ctx, http.StatusUnauthorized, "unauthorized_client", "client is invalid", "authorize")
+		return
+	}
+	if !ClientAllowsGrantType(client, "authorization_code") {
+		writeOAuthError(ctx, http.StatusBadRequest, "unauthorized_client", ErrUnsupportedGrantType.Error(), "authorize")
 		return
 	}
 	if err = ValidateRedirectURI(client, redirectURI); err != nil {

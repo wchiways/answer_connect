@@ -264,3 +264,148 @@ func TestAuthorizeSavesConsent(t *testing.T) {
 		t.Fatalf("consent should be saved: %v", err)
 	}
 }
+
+func TestTokenExchangeRejectsUnauthorizedGrantType(t *testing.T) {
+	store := NewInMemoryStore()
+	_, _, err := store.CreateClient(OIDCClient{
+		ID:                      "client_unauth_grant",
+		Name:                    "client-unauth-grant",
+		RedirectURIs:            []string{"https://client.example.com/callback"},
+		Scopes:                  []string{"openid", "profile"},
+		GrantTypes:              []string{"refresh_token"},
+		TokenEndpointAuthMethod: "client_secret_post",
+		Status:                  "active",
+	}, "secret_1")
+	if err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+
+	rawCode := "auth_code_unauth_grant"
+	err = store.SaveAuthCode(AuthCodeRecord{
+		CodeHash:      sha256Hex(rawCode),
+		ClientID:      "client_unauth_grant",
+		UserID:        "u_1",
+		RedirectURI:   "https://client.example.com/callback",
+		Scope:         []string{"openid", "profile"},
+		CodeChallenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+		CodeMethod:    "S256",
+		ExpiresAt:     time.Now().UTC().Add(5 * time.Minute),
+	})
+	if err != nil {
+		t.Fatalf("save auth code: %v", err)
+	}
+
+	ks, err := NewKeyService("")
+	if err != nil {
+		t.Fatalf("new key service: %v", err)
+	}
+	config := DefaultConfig()
+	config.Issuer = "https://answer.example.com"
+	handler := NewTokenHandler(store, NewTokenService(config, ks))
+	ctx := &fakeContext{form: map[string]string{
+		"grant_type":    "authorization_code",
+		"client_id":     "client_unauth_grant",
+		"client_secret": "secret_1",
+		"code":          rawCode,
+		"redirect_uri":  "https://client.example.com/callback",
+		"code_verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+	}}
+	handler.Handle(ctx)
+
+	if ctx.statusCode != 400 {
+		t.Fatalf("expected 400, got %d body=%s", ctx.statusCode, mustJSON(ctx.jsonBody))
+	}
+	payload := mustOAuthError(ctx.jsonBody)
+	if payload.Error != "unauthorized_client" {
+		t.Fatalf("expected unauthorized_client, got %s", payload.Error)
+	}
+}
+
+func TestRefreshTokenRejectsInactiveClient(t *testing.T) {
+	store := NewInMemoryStore()
+	_, _, err := store.CreateClient(OIDCClient{
+		ID:                      "client_inactive",
+		Name:                    "client-inactive",
+		RedirectURIs:            []string{"https://client.example.com/callback"},
+		Scopes:                  []string{"openid", "profile"},
+		GrantTypes:              []string{"authorization_code", "refresh_token"},
+		TokenEndpointAuthMethod: "client_secret_post",
+		Status:                  "disabled",
+	}, "secret_1")
+	if err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+
+	err = store.SaveRefreshToken(RefreshTokenRecord{
+		TokenHash: sha256Hex("refresh_disabled"),
+		ClientID:  "client_inactive",
+		UserID:    "u_1",
+		Scope:     []string{"openid", "profile"},
+		ExpiresAt: time.Now().UTC().Add(2 * time.Hour),
+		CreatedAt: time.Now().UTC(),
+	})
+	if err != nil {
+		t.Fatalf("save refresh token: %v", err)
+	}
+
+	ks, err := NewKeyService("")
+	if err != nil {
+		t.Fatalf("new key service: %v", err)
+	}
+	config := DefaultConfig()
+	config.Issuer = "https://answer.example.com"
+	handler := NewTokenHandler(store, NewTokenService(config, ks))
+	ctx := &fakeContext{form: map[string]string{
+		"grant_type":    "refresh_token",
+		"client_id":     "client_inactive",
+		"client_secret": "secret_1",
+		"refresh_token": "refresh_disabled",
+	}}
+	handler.Handle(ctx)
+
+	if ctx.statusCode != 401 {
+		t.Fatalf("expected 401, got %d body=%s", ctx.statusCode, mustJSON(ctx.jsonBody))
+	}
+	payload := mustOAuthError(ctx.jsonBody)
+	if payload.Error != "invalid_client" {
+		t.Fatalf("expected invalid_client, got %s", payload.Error)
+	}
+}
+
+func TestAuthorizeRejectsUnsupportedGrantType(t *testing.T) {
+	store := NewInMemoryStore()
+	_, _, err := store.CreateClient(OIDCClient{
+		ID:           "client_authorize_denied",
+		Name:         "client-authorize-denied",
+		RedirectURIs: []string{"https://client.example.com/callback"},
+		Scopes:       []string{"openid", "profile"},
+		GrantTypes:   []string{"refresh_token"},
+		Status:       "active",
+	}, "secret_1")
+	if err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+
+	handler := NewAuthorizeHandler(store, DefaultConfig(), func(_ HTTPContext) (UserProfile, error) {
+		return UserProfile{ID: "u_1"}, nil
+	})
+	ctx := &fakeContext{query: map[string]string{
+		"response_type":         "code",
+		"client_id":             "client_authorize_denied",
+		"redirect_uri":          "https://client.example.com/callback",
+		"scope":                 "openid profile",
+		"state":                 "state-1",
+		"nonce":                 "nonce-1",
+		"code_challenge":        "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+		"code_challenge_method": "S256",
+	}}
+	handler.Handle(ctx)
+
+	if ctx.statusCode != 400 {
+		t.Fatalf("expected 400, got %d body=%s", ctx.statusCode, mustJSON(ctx.jsonBody))
+	}
+	payload := mustOAuthError(ctx.jsonBody)
+	if payload.Error != "unauthorized_client" {
+		t.Fatalf("expected unauthorized_client, got %s", payload.Error)
+	}
+}

@@ -76,8 +76,21 @@ func TestUserInfoWithBearerToken(t *testing.T) {
 
 func TestRevokeRefreshToken(t *testing.T) {
 	store := NewInMemoryStore()
+	_, _, err := store.CreateClient(OIDCClient{
+		ID:                      "client_1",
+		Name:                    "client-1",
+		RedirectURIs:            []string{"https://client.example.com/callback"},
+		Scopes:                  []string{"openid"},
+		GrantTypes:              []string{"authorization_code", "refresh_token"},
+		TokenEndpointAuthMethod: "client_secret_post",
+		Status:                  "active",
+	}, "secret_1")
+	if err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+
 	rawToken := "refresh_token_1"
-	err := store.SaveRefreshToken(RefreshTokenRecord{
+	err = store.SaveRefreshToken(RefreshTokenRecord{
 		TokenHash: sha256Hex(rawToken),
 		ClientID:  "client_1",
 		UserID:    "u_1",
@@ -90,7 +103,11 @@ func TestRevokeRefreshToken(t *testing.T) {
 	}
 
 	handler := NewRevokeHandler(store)
-	ctx := &fakeContext{form: map[string]string{"token": rawToken}}
+	ctx := &fakeContext{form: map[string]string{
+		"token":         rawToken,
+		"client_id":     "client_1",
+		"client_secret": "secret_1",
+	}}
 	handler.Handle(ctx)
 
 	if ctx.statusCode != 200 {

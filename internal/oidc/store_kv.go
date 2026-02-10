@@ -69,6 +69,9 @@ func (s *KVStore) CreateClient(client OIDCClient, rawSecret string) (OIDCClient,
 	client.Scopes = normalizeScopes(client.Scopes)
 	client.RedirectURIs = normalizeScopes(client.RedirectURIs)
 	client.GrantTypes = normalizeScopes(client.GrantTypes)
+	if len(client.GrantTypes) == 0 {
+		client.GrantTypes = []string{"authorization_code", "refresh_token"}
+	}
 	if client.TokenEndpointAuthMethod == "" {
 		client.TokenEndpointAuthMethod = "client_secret_post"
 	}
@@ -157,6 +160,9 @@ func (s *KVStore) ValidateClientSecret(clientID, rawSecret string) (OIDCClient, 
 	client, err := s.GetClient(clientID)
 	if err != nil {
 		return OIDCClient{}, err
+	}
+	if !IsClientActive(client) {
+		return OIDCClient{}, ErrClientInactive
 	}
 	if client.TokenEndpointAuthMethod == "none" {
 		return client, nil

@@ -1,0 +1,49 @@
+plugin:
+  answer_oidc_provider:
+    backend:
+      info:
+        name:
+          other: Answer OIDC Provider
+        description:
+          other: Expose OAuth2/OIDC APIs to use Apache Answer as login service
+      config:
+        issuer:
+          title:
+            other: Issuer
+          description:
+            other: Public issuer URL used in OIDC discovery and token claims
+        base_path:
+          title:
+            other: Base Path
+          description:
+            other: OIDC endpoint base path mounted in Answer routes
+        access_ttl:
+          title:
+            other: Access Token TTL (seconds)
+          description:
+            other: Lifetime of access tokens in seconds
+        id_ttl:
+          title:
+            other: ID Token TTL (seconds)
+          description:
+            other: Lifetime of ID tokens in seconds
+        refresh_ttl:
+          title:
+            other: Refresh Token TTL (seconds)
+          description:
+            other: Lifetime of refresh tokens in seconds
+        code_ttl:
+          title:
+            other: Authorization Code TTL (seconds)
+          description:
+            other: Lifetime of authorization codes in seconds
+        private_key:
+          title:
+            other: RSA Private Key (PEM)
+          description:
+            other: Optional RSA private key for RS256 signing; auto-generated when empty
+        default_scopes:
+          title:
+            other: Default Scopes
+          description:
+            other: Space-separated scopes used when request scope is not provided
